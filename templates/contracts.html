@@ -6,19 +6,20 @@
 <div class="container mt-4">
     <h2 class="mb-4">Договора</h2>
 
-    <!-- Кнопка загрузки PDF - ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА -->
-    {% if is_admin %}
-    <div class="mb-4">
-        <a href="{{ url_for('upload_pdf') }}" class="btn btn-success">
-            Загрузить PDF
-        </a>
-    </div>
-    {% endif %}
-
     <!-- Форма для выбора периода -->
     <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title">Фильтр по дате регистрации договора</h5>
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h5 class="card-title mb-0">Фильтр по дате регистрации договора</h5>
+                {% if is_admin %}
+                <div>
+                    <a href="{{ url_for('upload_pdf') }}" class="btn btn-success btn-sm">
+                        Загрузить PDF
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
             <p class="text-muted">
                 {% if dates.show_all %}
                 <span class="text-success">Показаны все договора без фильтрации по дате</span>

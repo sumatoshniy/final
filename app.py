@@ -445,6 +445,54 @@ def upload_pdf():
     return render_template('upload_pdf.html')
 
 
+# Маршрут для управления PDF - ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА
+@app.route("/manage_pdf")
+@login_required
+def manage_pdf():
+    # Проверяем права администратора
+    if not check_admin():
+        flash('У вас нет прав для управления PDF файлами', 'danger')
+        return redirect(url_for('contracts'))
+
+    try:
+        connection = get_oracle_connection()
+        if not connection:
+            flash('Ошибка подключения к базе данных', 'danger')
+            return redirect(url_for('contracts'))
+
+        cursor = connection.cursor()
+
+        # Получаем все PDF файлы
+        cursor.execute("""
+            SELECT CONTRACT_NUM, FILE_NAME, UPLOAD_DATE 
+            FROM CONTRACT_PDF 
+            ORDER BY UPLOAD_DATE DESC
+        """)
+
+        pdf_files = cursor.fetchall()
+
+        # Форматируем даты
+        formatted_pdfs = []
+        for pdf in pdf_files:
+            contract_num, file_name, upload_date = pdf
+            upload_date_str = upload_date.strftime('%d.%m.%Y %H:%M:%S') if upload_date else ''
+            formatted_pdfs.append({
+                'contract_num': contract_num,
+                'file_name': file_name,
+                'upload_date': upload_date_str
+            })
+
+        cursor.close()
+        connection.close()
+
+        return render_template('manage_pdf.html', pdf_files=formatted_pdfs)
+
+    except cx_Oracle.Error as e:
+        print(f"Ошибка получения списка PDF: {e}")
+        flash('Ошибка при получении списка PDF файлов', 'danger')
+        return redirect(url_for('upload_pdf'))
+
+
 # Маршрут для удаления PDF - ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА
 @app.route("/delete_pdf/<contract_num>")
 @login_required
@@ -579,3 +627,5 @@ def about():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
+
