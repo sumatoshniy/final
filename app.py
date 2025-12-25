@@ -25,8 +25,7 @@ def get_oracle_connection():
     try:
         connection = cx_Oracle.connect(**ORACLE_CONFIG)
         return connection
-    except cx_Oracle.Error as e:
-        print(f"Ошибка подключения к Oracle: {e}")
+    except cx_Oracle.Error:
         return None
 
 
@@ -69,8 +68,7 @@ def has_pdf_for_contract(contract_num):
         connection.close()
 
         return count > 0
-    except cx_Oracle.Error as e:
-        print(f"Ошибка проверки PDF: {e}")
+    except cx_Oracle.Error:
         return False
 
 
@@ -80,7 +78,6 @@ def check_admin():
     if not current_user.is_authenticated:
         return False
 
-    # Администратор только пользователь с email admin@bk.ru
     return current_user.email.lower() == 'admin@bk.ru'
 
 
@@ -161,8 +158,7 @@ def login():
         flash('ОШИБКА! Неверный пароль', 'danger')
         return redirect('/')
 
-    except cx_Oracle.Error as e:
-        print(f"Ошибка базы данных: {e}")
+    except cx_Oracle.Error:
         flash('Ошибка базы данных', 'danger')
         return redirect('/')
 
@@ -192,8 +188,8 @@ def get_current_organization():
                         'inn': inn,
                         'adres': adres
                     }
-        except cx_Oracle.Error as e:
-            print(f"Ошибка получения организации: {e}")
+        except cx_Oracle.Error:
+            pass
     return None
 
 
@@ -212,8 +208,6 @@ def profile():
 @app.route("/contracts", methods=['GET'])
 @login_required
 def contracts():
-    print(f"\n📋 ПОЛЬЗОВАТЕЛЬ: {current_user.email}, KPO: {current_user.kpo}")
-
     if not current_user.kpo:
         flash('Организация не найдена', 'danger')
         return redirect('/profile')
@@ -236,10 +230,6 @@ def contracts():
         # Флаг, что указаны конкретные даты (не по умолчанию)
         custom_dates = bool(start_date_str and end_date_str)
 
-        print(f"   📅 Параметры запроса: start_date={start_date_str}, end_date={end_date_str}, show_all={show_all}")
-        print(f"   🎯 Пользователь явно запросил: {user_requested}")
-        print(f"   📅 Кастомные даты: {custom_dates}")
-
         # Получаем общее количество договоров для информации
         cursor.execute("""
             SELECT COUNT(*) 
@@ -248,12 +238,9 @@ def contracts():
             AND SUBSTR(NUM_DOG, -1) NOT IN ('Т', 'И')
         """, kpo=current_user.kpo)
         total_contracts = cursor.fetchone()[0]
-        print(f"   📊 Всего договоров для KPO={current_user.kpo}: {total_contracts}")
 
         # Если пользователь не запросил договора явно, показываем пустой список
         if not user_requested:
-            print(f"   ⚠️  Пользователь не запросил договора - показываем пустой список")
-
             # Устанавливаем даты для отображения (последний год)
             end_date = datetime.now()
             start_date = end_date - timedelta(days=365)
@@ -301,7 +288,6 @@ def contracts():
                 ORDER BY rd.DATA_REG DESC
             """
             params = {'kpo': current_user.kpo}
-            print(f"   🔍 Режим: ПОКАЗАТЬ ВСЕ договора")
 
             cursor.execute("""
                 SELECT MIN(DATA_REG), MAX(DATA_REG) 
@@ -309,7 +295,6 @@ def contracts():
                 WHERE KPO = :kpo
             """, kpo=current_user.kpo)
             min_max_dates = cursor.fetchone()
-            print(f"   📊 Min/Max даты для KPO={current_user.kpo}: {min_max_dates}")
 
             if min_max_dates and min_max_dates[0] and min_max_dates[1]:
                 start_date = min_max_dates[0]
@@ -353,13 +338,9 @@ def contracts():
                 ORDER BY rd.DATA_REG DESC
             """
             params = {'kpo': current_user.kpo, 'start_date': start_date, 'end_date': end_date}
-            print(f"   🔍 Режим: ФИЛЬТРАЦИЯ по датам {start_date} - {end_date}")
-
-        print(f"   🗃️  SQL запрос с параметрами: kpo={current_user.kpo}")
 
         cursor.execute(sql_query, params)
         contracts_data = cursor.fetchall()
-        print(f"   ✅ Найдено договоров: {len(contracts_data)}")
 
         cursor.close()
         connection.close()
@@ -406,10 +387,6 @@ def contracts():
                 'show_all': False
             }
 
-        print(f"   📋 Передано в шаблон договоров: {len(contracts_list)}")
-        print(f"   📅 Договора в периоде: {has_contracts_in_period}")
-        print(f"   📅 Кастомные даты: {custom_dates}")
-
         return render_template('contracts.html',
                                contracts=contracts_list,
                                dates=date_display,
@@ -420,11 +397,8 @@ def contracts():
                                custom_dates=custom_dates,
                                is_admin=check_admin())
 
-    except cx_Oracle.Error as e:
-        print(f"❌ Ошибка получения договоров: {e}")
+    except cx_Oracle.Error:
         flash('Ошибка получения данных', 'danger')
-
-    print(f"   ⚠️  Возвращаем пустой список договоров")
 
     # Возвращаем пустой список если ошибка
     end_date = datetime.now()
@@ -444,7 +418,6 @@ def contracts():
 @app.route("/upload_pdf", methods=['GET', 'POST'])
 @login_required
 def upload_pdf():
-    # Проверяем права администратора
     if not check_admin():
         flash('У вас нет прав для загрузки PDF файлов', 'danger')
         return redirect(url_for('contracts'))
@@ -515,11 +488,9 @@ def upload_pdf():
             return redirect(url_for('contracts'))
 
         except cx_Oracle.Error as e:
-            print(f"Ошибка загрузки PDF: {e}")
             flash(f'Ошибка при загрузке файла: {e}', 'danger')
             return redirect(url_for('upload_pdf'))
         except Exception as e:
-            print(f"Ошибка обработки файла: {e}")
             flash(f'Ошибка при обработке файла: {e}', 'danger')
             return redirect(url_for('upload_pdf'))
 
@@ -530,7 +501,6 @@ def upload_pdf():
 @app.route("/manage_pdf")
 @login_required
 def manage_pdf():
-    # Проверяем права администратора
     if not check_admin():
         flash('У вас нет прав для управления PDF файлами', 'danger')
         return redirect(url_for('contracts'))
@@ -568,8 +538,7 @@ def manage_pdf():
 
         return render_template('manage_pdf.html', pdf_files=formatted_pdfs)
 
-    except cx_Oracle.Error as e:
-        print(f"Ошибка получения списка PDF: {e}")
+    except cx_Oracle.Error:
         flash('Ошибка при получении списка PDF файлов', 'danger')
         return redirect(url_for('upload_pdf'))
 
@@ -578,7 +547,6 @@ def manage_pdf():
 @app.route("/delete_pdf/<contract_num>")
 @login_required
 def delete_pdf(contract_num):
-    # Проверяем права администратора
     if not check_admin():
         flash('У вас нет прав для удаления PDF файлов', 'danger')
         return redirect(url_for('contracts'))
@@ -591,7 +559,6 @@ def delete_pdf(contract_num):
 
         cursor = connection.cursor()
 
-        # Проверяем, существует ли файл
         cursor.execute("""
             SELECT COUNT(*) 
             FROM CONTRACT_PDF 
@@ -619,7 +586,6 @@ def delete_pdf(contract_num):
         return redirect(url_for('contracts'))
 
     except cx_Oracle.Error as e:
-        print(f"Ошибка удаления PDF: {e}")
         flash(f'Ошибка при удалении файла: {e}', 'danger')
         return redirect(url_for('contracts'))
 
@@ -680,12 +646,10 @@ def view_pdf(contract_num):
             download_name=file_name
         )
 
-    except cx_Oracle.Error as e:
-        print(f"Ошибка получения PDF: {e}")
+    except cx_Oracle.Error:
         flash('Ошибка при получении файла', 'danger')
         return redirect(url_for('contracts'))
-    except Exception as e:
-        print(f"Ошибка обработки PDF: {e}")
+    except Exception:
         flash('Ошибка при обработке файла', 'danger')
         return redirect(url_for('contracts'))
 
