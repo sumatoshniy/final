@@ -206,6 +206,8 @@ def profile():
 @app.route("/contracts", methods=['GET'])
 @login_required
 def contracts():
+    print(f"\n📋 ПОЛЬЗОВАТЕЛЬ: {current_user.email}, KPO: {current_user.kpo}")
+
     if not current_user.kpo:
         flash('Организация не найдена', 'danger')
         return redirect('/profile')
@@ -222,6 +224,52 @@ def contracts():
         start_date_str = request.args.get('start_date')
         end_date_str = request.args.get('end_date')
         show_all = request.args.get('show_all') == 'true'
+
+        # Флаг, что пользователь явно запросил договора
+        user_requested = start_date_str or end_date_str or show_all
+
+        print(f"   📅 Параметры запроса: start_date={start_date_str}, end_date={end_date_str}, show_all={show_all}")
+        print(f"   🎯 Пользователь явно запросил: {user_requested}")
+
+        # Если пользователь не запросил договора явно, показываем пустой список
+        if not user_requested:
+            print(f"   ⚠️  Пользователь не запросил договора - показываем пустой список")
+
+            # Устанавливаем даты для отображения (последний год)
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=365)
+
+            contracts_list = []
+            filtered_count = 0
+
+            # Получаем общее количество договоров для информации
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM REG_DOGOVOR 
+                WHERE KPO = :kpo 
+                AND SUBSTR(NUM_DOG, -1) NOT IN ('Т', 'И')
+            """, kpo=current_user.kpo)
+            total_contracts = cursor.fetchone()[0]
+            print(f"   📊 Всего договоров для KPO={current_user.kpo}: {total_contracts}")
+
+            cursor.close()
+            connection.close()
+
+            date_display = {
+                'start_date': start_date.strftime('%d.%m.%Y'),
+                'end_date': end_date.strftime('%d.%m.%Y'),
+                'start_date_input': start_date.strftime('%Y-%m-%d'),
+                'end_date_input': end_date.strftime('%Y-%m-%d'),
+                'show_all': False
+            }
+
+            return render_template('contracts.html',
+                                   contracts=contracts_list,
+                                   dates=date_display,
+                                   kpo=current_user.kpo,
+                                   total_contracts=total_contracts,
+                                   filtered_count=filtered_count,
+                                   is_admin=check_admin())
 
         # SQL запрос - разный в зависимости от режима
         if show_all:
@@ -241,6 +289,7 @@ def contracts():
                 ORDER BY rd.DATA_REG DESC
             """
             params = {'kpo': current_user.kpo}
+            print(f"   🔍 Режим: ПОКАЗАТЬ ВСЕ договора")
 
             cursor.execute("""
                 SELECT MIN(DATA_REG), MAX(DATA_REG) 
@@ -248,6 +297,7 @@ def contracts():
                 WHERE KPO = :kpo
             """, kpo=current_user.kpo)
             min_max_dates = cursor.fetchone()
+            print(f"   📊 Min/Max даты для KPO={current_user.kpo}: {min_max_dates}")
 
             if min_max_dates and min_max_dates[0] and min_max_dates[1]:
                 start_date = min_max_dates[0]
@@ -257,6 +307,7 @@ def contracts():
                 end_date = datetime.now()
 
         else:
+            # Фильтрация по датам
             if start_date_str and end_date_str:
                 try:
                     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
@@ -266,6 +317,7 @@ def contracts():
                     start_date = datetime.now() - timedelta(days=365)
                     end_date = datetime.now()
             else:
+                # Если даты не указаны, показываем за последний год
                 end_date = datetime.now()
                 start_date = end_date - timedelta(days=365)
 
@@ -286,10 +338,15 @@ def contracts():
                 ORDER BY rd.DATA_REG DESC
             """
             params = {'kpo': current_user.kpo, 'start_date': start_date, 'end_date': end_date}
+            print(f"   🔍 Режим: ФИЛЬТРАЦИЯ по датам {start_date} - {end_date}")
+
+        print(f"   🗃️  SQL запрос с параметрами: kpo={current_user.kpo}")
 
         cursor.execute(sql_query, params)
         contracts_data = cursor.fetchall()
+        print(f"   ✅ Найдено договоров: {len(contracts_data)}")
 
+        # Проверим общее количество договоров для этого KPO
         cursor.execute("""
             SELECT COUNT(*) 
             FROM REG_DOGOVOR 
@@ -297,10 +354,12 @@ def contracts():
             AND SUBSTR(NUM_DOG, -1) NOT IN ('Т', 'И')
         """, kpo=current_user.kpo)
         total_contracts = cursor.fetchone()[0]
+        print(f"   📊 Всего договоров для KPO={current_user.kpo}: {total_contracts}")
 
         cursor.close()
         connection.close()
 
+        # Обработка данных
         contracts_list = []
         for contract in contracts_data:
             num_dog, data_reg, dat_beg_dog, dat_end_dog, naim_dog, name = contract
@@ -321,6 +380,7 @@ def contracts():
                 'has_pdf': has_pdf
             })
 
+        # Даты для отображения
         if show_all:
             date_display = {
                 'start_date': start_date.strftime('%d.%m.%Y') if hasattr(start_date, 'strftime') else '—',
@@ -338,6 +398,8 @@ def contracts():
                 'show_all': False
             }
 
+        print(f"   📋 Передано в шаблон договоров: {len(contracts_list)}")
+
         return render_template('contracts.html',
                                contracts=contracts_list,
                                dates=date_display,
@@ -347,14 +409,20 @@ def contracts():
                                is_admin=check_admin())
 
     except cx_Oracle.Error as e:
-        print(f"Ошибка получения договоров: {e}")
+        print(f"❌ Ошибка получения договоров: {e}")
         flash('Ошибка получения данных', 'danger')
 
+    print(f"   ⚠️  Возвращаем пустой список договоров")
+
+    # Возвращаем пустой список если ошибка
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=365)
+
     return render_template('contracts.html', contracts=[], dates={
-        'start_date': (datetime.now() - timedelta(days=365)).strftime('%d.%m.%Y'),
-        'end_date': datetime.now().strftime('%d.%m.%Y'),
-        'start_date_input': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d'),
-        'end_date_input': datetime.now().strftime('%Y-%m-%d'),
+        'start_date': start_date.strftime('%d.%m.%Y'),
+        'end_date': end_date.strftime('%d.%m.%Y'),
+        'start_date_input': start_date.strftime('%Y-%m-%d'),
+        'end_date_input': end_date.strftime('%Y-%m-%d'),
         'show_all': False
     }, kpo=current_user.kpo, total_contracts=0, filtered_count=0, is_admin=check_admin())
 
