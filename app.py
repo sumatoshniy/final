@@ -90,6 +90,12 @@ def index():
     return render_template('index.html')
 
 
+# GET обработчик для страницы входа
+@app.route("/login", methods=['GET'])
+def login_page():
+    return redirect('/')
+
+
 # POST обработчик для входа
 @app.route("/login", methods=['POST'])
 def login():
@@ -227,9 +233,22 @@ def contracts():
 
         # Флаг, что пользователь явно запросил договора
         user_requested = start_date_str or end_date_str or show_all
+        # Флаг, что указаны конкретные даты (не по умолчанию)
+        custom_dates = bool(start_date_str and end_date_str)
 
         print(f"   📅 Параметры запроса: start_date={start_date_str}, end_date={end_date_str}, show_all={show_all}")
         print(f"   🎯 Пользователь явно запросил: {user_requested}")
+        print(f"   📅 Кастомные даты: {custom_dates}")
+
+        # Получаем общее количество договоров для информации
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM REG_DOGOVOR 
+            WHERE KPO = :kpo 
+            AND SUBSTR(NUM_DOG, -1) NOT IN ('Т', 'И')
+        """, kpo=current_user.kpo)
+        total_contracts = cursor.fetchone()[0]
+        print(f"   📊 Всего договоров для KPO={current_user.kpo}: {total_contracts}")
 
         # Если пользователь не запросил договора явно, показываем пустой список
         if not user_requested:
@@ -241,16 +260,7 @@ def contracts():
 
             contracts_list = []
             filtered_count = 0
-
-            # Получаем общее количество договоров для информации
-            cursor.execute("""
-                SELECT COUNT(*) 
-                FROM REG_DOGOVOR 
-                WHERE KPO = :kpo 
-                AND SUBSTR(NUM_DOG, -1) NOT IN ('Т', 'И')
-            """, kpo=current_user.kpo)
-            total_contracts = cursor.fetchone()[0]
-            print(f"   📊 Всего договоров для KPO={current_user.kpo}: {total_contracts}")
+            has_contracts_in_period = False
 
             cursor.close()
             connection.close()
@@ -269,6 +279,8 @@ def contracts():
                                    kpo=current_user.kpo,
                                    total_contracts=total_contracts,
                                    filtered_count=filtered_count,
+                                   has_contracts_in_period=has_contracts_in_period,
+                                   custom_dates=custom_dates,
                                    is_admin=check_admin())
 
         # SQL запрос - разный в зависимости от режима
@@ -312,14 +324,17 @@ def contracts():
                 try:
                     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
                     end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+                    custom_dates = True
                 except ValueError:
                     flash('Неверный формат даты', 'danger')
                     start_date = datetime.now() - timedelta(days=365)
                     end_date = datetime.now()
+                    custom_dates = False
             else:
                 # Если даты не указаны, показываем за последний год
                 end_date = datetime.now()
                 start_date = end_date - timedelta(days=365)
+                custom_dates = False
 
             sql_query = """
                 SELECT 
@@ -346,16 +361,6 @@ def contracts():
         contracts_data = cursor.fetchall()
         print(f"   ✅ Найдено договоров: {len(contracts_data)}")
 
-        # Проверим общее количество договоров для этого KPO
-        cursor.execute("""
-            SELECT COUNT(*) 
-            FROM REG_DOGOVOR 
-            WHERE KPO = :kpo 
-            AND SUBSTR(NUM_DOG, -1) NOT IN ('Т', 'И')
-        """, kpo=current_user.kpo)
-        total_contracts = cursor.fetchone()[0]
-        print(f"   📊 Всего договоров для KPO={current_user.kpo}: {total_contracts}")
-
         cursor.close()
         connection.close()
 
@@ -380,6 +385,9 @@ def contracts():
                 'has_pdf': has_pdf
             })
 
+        # Проверяем, есть ли договора в выбранном периоде
+        has_contracts_in_period = len(contracts_list) > 0
+
         # Даты для отображения
         if show_all:
             date_display = {
@@ -399,6 +407,8 @@ def contracts():
             }
 
         print(f"   📋 Передано в шаблон договоров: {len(contracts_list)}")
+        print(f"   📅 Договора в периоде: {has_contracts_in_period}")
+        print(f"   📅 Кастомные даты: {custom_dates}")
 
         return render_template('contracts.html',
                                contracts=contracts_list,
@@ -406,6 +416,8 @@ def contracts():
                                kpo=current_user.kpo,
                                total_contracts=total_contracts,
                                filtered_count=len(contracts_list),
+                               has_contracts_in_period=has_contracts_in_period,
+                               custom_dates=custom_dates,
                                is_admin=check_admin())
 
     except cx_Oracle.Error as e:
@@ -424,7 +436,8 @@ def contracts():
         'start_date_input': start_date.strftime('%Y-%m-%d'),
         'end_date_input': end_date.strftime('%Y-%m-%d'),
         'show_all': False
-    }, kpo=current_user.kpo, total_contracts=0, filtered_count=0, is_admin=check_admin())
+    }, kpo=current_user.kpo, total_contracts=0, filtered_count=0,
+                           has_contracts_in_period=False, custom_dates=False, is_admin=check_admin())
 
 
 # Маршрут для загрузки PDF - ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА (admin@bk.ru)
@@ -695,5 +708,3 @@ def about():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
-
-

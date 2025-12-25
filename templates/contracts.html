@@ -127,13 +127,22 @@
             {% else %}
             <div class="text-center py-5">
                 {% if dates.show_all %}
+                <!-- Режим "Показать все договора" -->
                 <h5 class="text-muted">Договора не найдены</h5>
                 <p class="text-muted">Для вашей организации не найдено договоров</p>
-                {% else %}
+
+                {% elif custom_dates %}
+                <!-- Пользователь выбрал конкретные даты, но договоров нет -->
                 <h5 class="text-muted">Договора не найдены</h5>
                 <p class="text-muted">
-                    Для просмотра договоров выберите период и нажмите "Показать договора"<br>
-                    или нажмите "Показать все договора" для отображения всех договоров
+                    Нет договоров за период с {{ dates.start_date }} по {{ dates.end_date }}
+                </p>
+
+                {% else %}
+                <!-- Первый вход или сброс - договора не запрашивались -->
+                <h5 class="text-muted">Договора не найдены</h5>
+                <p class="text-muted">
+                    Для просмотра договоров выберите период и нажмите "Показать договора"
                 </p>
                 {% endif %}
             </div>
@@ -142,9 +151,6 @@
         {% if contracts %}
         <div class="card-footer text-muted">
             Найдено договоров: {{ contracts|length }}
-            {% if not dates.show_all and total_contracts > filtered_count %}
-            <span class="ms-3">Всего договоров у организации: {{ total_contracts }}</span>
-            {% endif %}
         </div>
         {% endif %}
     </div>
