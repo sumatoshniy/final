@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>Личный кабинет контрагента АО БМК</h3>
+        </div>
+        <div class="card-body">
+            <h4 class="mb-4">Добро пожаловать в личный кабинет контрагента АО БМК</h4>
+
+            {% if organization %}
+            <div class="organization-info">
+                <h5>Данные вашей организации:</h5>
+                <table class="table table-bordered mt-3">
+                    <tr>
+                        <th style="width: 250px;">Наименование организации:</th>
+                        <td>{{ organization.npo }}</td>
+                    </tr>
+                    <tr>
+                        <th>ИНН:</th>
+                        <td>{{ organization.inn }}</td>
+                    </tr>
+                    <tr>
+                        <th>Адрес:</th>
+                        <td>{{ organization.adres }}</td>
+                    </tr>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+                <h5>❌ ОШИБКА: Организация не найдена!</h5>
+                <p>Пользователь не привязан к организации.</p>
+                <p>Обратитесь к администратору.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

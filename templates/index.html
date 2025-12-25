@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Главная страница
+{% endblock %}
+
+{% block content %}
+<!-- Можно оставить пустым или добавить приветствие -->
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-body text-center">
+            <h3>Личный кабинет контрагента АО БМК</h3>
+            <p class="text-muted">Для доступа к функциям личного кабинета войдите в систему</p>
+            
+            {% if not current_user.is_authenticated %}
+            <div class="mt-4">
+                <p>Используйте форму входа в правом верхнем углу</p>
+            </div>
+            {% else %}
+            <div class="mt-4">
+                <p>Вы уже вошли в систему как <strong>{{ current_user.email }}</strong></p>
+                <a href="{{ url_for('profile') }}" class="btn btn-primary">Перейти в личный кабинет</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

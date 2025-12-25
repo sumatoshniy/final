@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Загрузка PDF{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">📄 Загрузка PDF</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="contract_num" class="form-label">Номер договора:</label>
+                            <input type="text" name="contract_num" id="contract_num"
+                                   class="form-control"
+                                   placeholder="Например: 35706Д"
+                                   value="{{ request.args.get('contract', '') }}"
+                                   required>
+                            <div class="form-text">
+                                Введите номер договора точно как в системе
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="pdf_file" class="form-label">PDF файл:</label>
+                            <input type="file" name="pdf_file" id="pdf_file"
+                                   class="form-control" accept=".pdf" required>
+                            <div class="form-text">Только PDF файлы (макс. 10 МБ)</div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('contracts') }}" class="btn btn-secondary me-md-2">
+                                Отмена
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Загрузить
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted">
+                        После загрузки PDF будет доступен для просмотра на странице договоров
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

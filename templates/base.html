@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css')}}">
+    <title>{% block title %}Личный кабинет контрагента{% endblock %}</title>
+</head>
+<body style="min-height: 100vh; display: flex; flex-direction: column;">
+    <div class="container flex-grow-1">
+        <header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between py-3 mb-4 border-bottom">
+            <div class="col-md-3 mb-2 mb-md-0">
+                <a href="/" class="d-inline-flex link-body-emphasis text-decoration-none">
+                    <img class="header__img" src="{{ url_for('static', filename='img/logo1.png') }}" alt="logo1">
+                </a>
+            </div>
+
+            <ul class="nav col-12 col-md-auto mb-2 justify-content-center mb-md-0">
+                <li><a href="{{ url_for('index') }}" class="nav-link px-2 link-secondary">Главная</a></li>
+                <li><a href="{{ url_for('about') }}" class="nav-link px-2">О нас</a></li>
+                {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('profile') }}" class="nav-link px-2">Личный кабинет</a></li>
+                <li><a href="{{ url_for('contracts') }}" class="nav-link px-2">Договора</a></li>
+                {% endif %}
+            </ul>
+
+            <div class="col-md-3 text-end">
+                {% if current_user.is_authenticated %}
+                <div class="d-flex flex-column align-items-end">
+                    <span class="mb-1"><small>Вы вошли как: {{ current_user.email }}</small></span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Выйти</a>
+                </div>
+                {% else %}
+                <!-- Форма входа -->
+                <form action="{{ url_for('login') }}" method="POST" class="mt-1">
+                    <div class="d-flex">
+                        <input type="text" name="username" class="form-control form-control-sm me-1"
+                               placeholder="Логин" required style="width: 100px;">
+                        <input type="password" name="password" class="form-control form-control-sm me-1"
+                               placeholder="Пароль" required style="width: 100px;">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Войти</button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Сообщения flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container mt-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Контент страницы -->
+        {% block content %} {% endblock %}
+    </div>
+
+    <!-- Футер всегда внизу -->
+    <footer class="mt-auto py-3 border-top" style="background-color: #f8f9fa;">
+        <div class="container">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <div class="col-md-4 d-flex align-items-center">
+                    <a href="/" class="mb-3 me-2 mb-md-0 text-muted text-decoration-none lh-1">
+                        <img class="footer__img" src="{{ url_for('static', filename='img/logo4.png') }}" alt="logo4">
+                    </a>
+                    <span class="mb-3 mb-md-0 text-muted">© ПАО «Мечел», 2025</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-eMqH1hL7N5t0N5t5t5p0t5t5t5t5t5t5t5t5t5t5t5t5t5t5t5t5t5t5t5t5t5t5" crossorigin="anonymous"></script>
+</body>
+</html>

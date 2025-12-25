@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Договора{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Договора</h2>
+
+    <!-- Кнопка загрузки PDF -->
+    <div class="mb-4">
+        <a href="{{ url_for('upload_pdf') }}" class="btn btn-success">
+            📄 Загрузить PDF
+        </a>
+    </div>
+
+    <!-- Форма для выбора периода -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Фильтр по дате регистрации договора</h5>
+            <p class="text-muted">
+                {% if dates.show_all %}
+                <span class="text-success">Показаны все договора без фильтрации по дате</span>
+                {% else %}
+                Выберите период, за который хотите посмотреть договора
+                {% endif %}
+            </p>
+            <form method="GET" action="{{ url_for('contracts') }}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">C:</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date"
+                               value="{{ dates.start_date_input }}" {% if dates.show_all %}disabled{% endif %}>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label">По:</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date"
+                               value="{{ dates.end_date_input }}" {% if dates.show_all %}disabled{% endif %}>
+                    </div>
+                    <div class="col-md-6">
+                        <!-- Период над кнопками -->
+                        <div class="mb-2">
+                            {% if dates.show_all %}
+                            <small class="text-muted">Показаны все договора</small>
+                            {% else %}
+                            <small class="text-muted">Период: {{ dates.start_date }} - {{ dates.end_date }}</small>
+                            {% endif %}
+                        </div>
+
+                        <!-- Кнопки -->
+                        <div class="d-flex gap-2">
+                            {% if not dates.show_all %}
+                            <button type="submit" class="btn btn-primary">
+                                Показать договора
+                            </button>
+                            {% endif %}
+                            <a href="{{ url_for('contracts') }}?show_all=true" class="btn btn-success">
+                                {% if dates.show_all %}
+                                Показаны все
+                                {% else %}
+                                Показать все договора
+                                {% endif %}
+                            </a>
+                            <a href="{{ url_for('contracts') }}" class="btn btn-outline-secondary">
+                                Сбросить
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Результаты -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                {% if dates.show_all %}
+                Все договора
+                {% else %}
+                Договора за период с {{ dates.start_date }} по {{ dates.end_date }}
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if contracts %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>№ договора</th>
+                            <th>Дата</th>
+                            <th>Период действия</th>
+                            <th>Вид договора</th>
+                            <th>Предмет договора</th>
+                            <th>PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contract in contracts %}
+                        <tr>
+                            <td><strong>{{ contract.num_dog }}</strong></td>
+                            <td>{{ contract.data_reg }}</td>
+                            <td>{{ contract.period }}</td>
+                            <td>{{ contract.vid_dog }}</td>
+                            <td>{{ contract.predmet }}</td>
+                            <td>
+                                {% if contract.has_pdf %}
+                                <a href="{{ url_for('view_pdf', contract_num=contract.num_dog) }}"
+                                   class="btn btn-sm btn-primary"
+                                   target="_blank">
+                                    📄 Открыть
+                                </a>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <h5 class="text-muted">Договора не найдены</h5>
+                <p class="text-muted">
+                    {% if dates.show_all %}
+                    Договора не найдены
+                    {% else %}
+                    Попробуйте изменить период поиска
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        {% if contracts %}
+        <div class="card-footer text-muted">
+            Найдено договоров: {{ contracts|length }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
