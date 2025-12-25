@@ -6,12 +6,14 @@
 <div class="container mt-4">
     <h2 class="mb-4">Договора</h2>
 
-    <!-- Кнопка загрузки PDF -->
+    <!-- Кнопка загрузки PDF - ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА -->
+    {% if is_admin %}
     <div class="mb-4">
         <a href="{{ url_for('upload_pdf') }}" class="btn btn-success">
-            📄 Загрузить PDF
+            Загрузить PDF
         </a>
     </div>
+    {% endif %}
 
     <!-- Форма для выбора периода -->
     <div class="card mb-4">
@@ -92,28 +94,48 @@
                             <th>Период действия</th>
                             <th>Вид договора</th>
                             <th>Предмет договора</th>
-                            <th>PDF</th>
+                            {% if is_admin %}
+                            <th>Действия</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
                         {% for contract in contracts %}
                         <tr>
-                            <td><strong>{{ contract.num_dog }}</strong></td>
+                            <td>
+                                {% if contract.has_pdf %}
+                                <a href="{{ url_for('view_pdf', contract_num=contract.num_dog) }}"
+                                   class="text-decoration-none fw-bold text-primary"
+                                   target="_blank">
+                                    {{ contract.num_dog }}
+                                </a>
+                                {% else %}
+                                <strong>{{ contract.num_dog }}</strong>
+                                {% endif %}
+                            </td>
                             <td>{{ contract.data_reg }}</td>
                             <td>{{ contract.period }}</td>
                             <td>{{ contract.vid_dog }}</td>
                             <td>{{ contract.predmet }}</td>
+                            {% if is_admin %}
                             <td>
                                 {% if contract.has_pdf %}
-                                <a href="{{ url_for('view_pdf', contract_num=contract.num_dog) }}"
-                                   class="btn btn-sm btn-primary"
-                                   target="_blank">
-                                    📄 Открыть
-                                </a>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('view_pdf', contract_num=contract.num_dog) }}"
+                                       class="btn btn-outline-primary" target="_blank">
+                                        Просмотр
+                                    </a>
+                                    <a href="{{ url_for('delete_pdf', contract_num=contract.num_dog) }}"
+                                       class="btn btn-outline-danger"
+                                       onclick="return confirm('Вы уверены, что хотите удалить PDF для договора {{ contract.num_dog }}?')">
+                                        Удалить
+                                    </a>
+                                </div>
                                 {% else %}
                                 <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>

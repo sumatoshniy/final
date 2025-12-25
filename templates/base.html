@@ -24,6 +24,9 @@
                 {% if current_user.is_authenticated %}
                 <li><a href="{{ url_for('profile') }}" class="nav-link px-2">Личный кабинет</a></li>
                 <li><a href="{{ url_for('contracts') }}" class="nav-link px-2">Договора</a></li>
+                {% if current_user.email == 'admin@bk.ru' %}
+                <li><a href="{{ url_for('upload_pdf') }}" class="nav-link px-2">Загрузить PDF</a></li>
+                {% endif %}
                 {% endif %}
             </ul>
 
@@ -31,6 +34,9 @@
                 {% if current_user.is_authenticated %}
                 <div class="d-flex flex-column align-items-end">
                     <span class="mb-1"><small>Вы вошли как: {{ current_user.email }}</small></span>
+                    {% if current_user.email == 'admin@bk.ru' %}
+                    <span class="badge bg-danger mb-1">Администратор</span>
+                    {% endif %}
                     <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Выйти</a>
                 </div>
                 {% else %}
