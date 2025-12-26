@@ -129,7 +129,7 @@ def login():
         if ksost == 2:
             cursor.close()
             connection.close()
-            flash('Пользователь заблокирован, обратитесь к менеджеру', 'warning')
+            flash('Пользователь заблокирован, обратитесь к администратору', 'warning')
             return redirect('/')
 
         if ksost == 1 and user_password == password:
@@ -239,7 +239,7 @@ def contracts():
         """, kpo=current_user.kpo)
         total_contracts = cursor.fetchone()[0]
 
-        # Если пользователь не запросил договора явно, показываем пустой список
+        # Если пользователь не запросил договора, показываем пустой список
         if not user_requested:
             # Устанавливаем даты для отображения (последний год)
             end_date = datetime.now()
@@ -414,7 +414,7 @@ def contracts():
                            has_contracts_in_period=False, custom_dates=False, is_admin=check_admin())
 
 
-# Маршрут для загрузки PDF - ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА (admin@bk.ru)
+# Маршрут для загрузки PDF для админа
 @app.route("/upload_pdf", methods=['GET', 'POST'])
 @login_required
 def upload_pdf():
@@ -497,7 +497,7 @@ def upload_pdf():
     return render_template('upload_pdf.html')
 
 
-# Маршрут для управления PDF - ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА
+# Маршрут для управления PDF для админа
 @app.route("/manage_pdf")
 @login_required
 def manage_pdf():
@@ -590,7 +590,7 @@ def delete_pdf(contract_num):
         return redirect(url_for('contracts'))
 
 
-# Маршрут для просмотра PDF - ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+# Маршрут для просмотра PDF для всех
 @app.route("/view_pdf/<contract_num>")
 @login_required
 def view_pdf(contract_num):
@@ -627,10 +627,10 @@ def view_pdf(contract_num):
                 flash('PDF файл не найден', 'danger')
                 return redirect(url_for('contracts'))
 
-        # Правильно читаем BLOB
+        # Прочтение BLOB
         pdf_blob, file_name = result
 
-        # Читаем BLOB полностью перед закрытием курсора
+        # Почтение BLOB перед закрытием курсора
         pdf_data = pdf_blob.read()
 
         cursor.close()
